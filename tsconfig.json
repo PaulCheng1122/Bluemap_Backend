@@ -1,27 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
+    "target": "ES2020",                // Compatible with modern Node.js (18/20)
+    "module": "CommonJS",              // CommonJS module system for backend
+    "lib": ["ES2020"],                 // Only ES standard library, no DOM types
+    "rootDir": "src",                  // Source code directory
+    "outDir": "dist",                  // Compiled JavaScript output directory
     "strict": true,
-    "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",        // Node-style module resolution
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "noEmit": false,                   // Must emit JS files on build
+    "allowJs": false,
+    "isolatedModules": false,
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"]                 // Path alias for cleaner imports
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts"],          // Include all TS files under src
+  "exclude": ["node_modules", "dist"]  // Exclude dependencies and build output
 }
