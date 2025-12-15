@@ -1,59 +1,43 @@
 import { Request, Response } from 'express';
-import { firestore, admin } from '../config/firebase';
+import { firestore } from '../config/firebase';
 
-// Approximate coordinates for Penang
-const PENANG_BOUNDS = {
-  minLat: 5.1,
-  maxLat: 5.6,
-  minLng: 100.1,
-  maxLng: 100.6,
-};
-
-const isWithinPenang = (latitude: number, longitude: number): boolean => {
-  return (
-    latitude >= PENANG_BOUNDS.minLat &&
-    latitude <= PENANG_BOUNDS.maxLat &&
-    longitude >= PENANG_BOUNDS.minLng &&
-    longitude <= PENANG_BOUNDS.maxLng
-  );
-};
-
-export const submitMission = async (req: Request, res: Response) => {
-  // The user object is attached by the verifyToken middleware
-  const userId = (req as any).user?.uid; // 如果之后我们给 Request 加类型，可以去掉 as any
-
-  const { missionId, latitude, longitude, photoUrl } = req.body;
-
-  if (!missionId || latitude === undefined || longitude === undefined || !photoUrl) {
-    return res
-      .status(400)
-      .json({ error: 'Missing required fields: missionId, latitude, longitude, photoUrl.' });
-  }
-
-  // Geofencing validation
-  if (!isWithinPenang(latitude, longitude)) {
-    return res.status(400).json({
-      error: 'Submission rejected: Location is outside of the Penang operational area.',
-    });
-  }
-
+export const getMapPoints = async (req: Request, res: Response) => {
   try {
-    const submission = {
-      userId,
-      missionId,
-      location: new admin.firestore.GeoPoint(latitude, longitude),
-      photoUrl,
-      status: 'pending_verification',
-      submittedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
+    // Fetch static hotspots
+    const hotspotsSnapshot = await firestore.collection('hotspots').get();
+    const hotspots = hotspotsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      type: 'hotspot',
+      ...doc.data(),
+    }));
 
-    const docRef = await firestore.collection('submissions').add(submission);
+    // Fetch recently verified cleanup locations from completed missions
+    const missionsSnapshot = await firestore
+      .collection('missions')
+      .where('status', '==', 'completed')
+      .get();
 
-    res
-      .status(201)
-      .json({ message: 'Submission received successfully.', submissionId: docRef.id });
-  } catch (error) {
-    console.error('Error submitting mission:', error);
-    res.status(500).json({ error: 'Failed to process submission.' });
+    const recentCleanups = missionsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      type: 'cleanup',
+      ...doc.data(),
+    }));
+
+    const allPoints = [...hotspots, ...recentCleanups];
+    return res.status(200).json(allPoints);
+  } catch (error: any) {
+    console.error('[map/points] Error fetching map points:', error?.message || error);
+    console.error('[map/points] code:', error?.code);
+    console.error('[map/points] name:', error?.name);
+    console.error('[map/points] stack:', error?.stack);
+
+    return res.status(500).json({
+      error: 'Failed to retrieve map points.',
+      debug: {
+        message: error?.message,
+        code: error?.code,
+        name: error?.name,
+      },
+    });
   }
 };
