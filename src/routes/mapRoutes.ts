@@ -9,6 +9,6 @@ const router = Router();
  * @description Get all points of interest for the interactive map.
  * @access Private (user must be logged in)
  */
-router.get('/points', getMapPoints);
+router.get('/points', verifyToken, getMapPoints);
 
 export { router as mapRoutes };
